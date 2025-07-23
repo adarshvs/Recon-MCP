@@ -13,7 +13,7 @@ ENV/
 .env
 *.env
 secrets.yaml
-
+.gitignore
 # macOS system files
 .DS_Store
 
