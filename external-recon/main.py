@@ -9,23 +9,18 @@ def dig_tool(params):
     domain = params.get("domain","")
     return subprocess.run(["dig", domain], capture_output=True, text=True).stdout
 
-TOOLS = {
-    "whois": whois_tool,
-    "dig":   dig_tool
-}
+TOOLS = {"whois": whois_tool, "dig": dig_tool}
 
 def main():
-    req_raw = sys.stdin.read()
     try:
-        req = json.loads(req_raw)
+        req = json.loads(sys.stdin.read())
     except json.JSONDecodeError:
         print(json.dumps({"jsonrpc":"2.0","error":"Invalid JSON"}))
         return
 
     method = req.get("method","")
+    func = TOOLS.get(method)
     params = req.get("params",{})
-    func   = TOOLS.get(method)
-
     if not func:
         result = f"Unknown method: {method}"
     else:
@@ -34,8 +29,7 @@ def main():
         except Exception as e:
             result = str(e)
 
-    resp = {"jsonrpc":"2.0","id":req.get("id"),"result":result}
-    print(json.dumps(resp))
+    print(json.dumps({"jsonrpc":"2.0","id":req.get("id"),"result":result}))
 
 if __name__ == "__main__":
     main()

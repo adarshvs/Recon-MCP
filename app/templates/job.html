@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Recon Dashboard</title>
+  <style>
+    body { font-family: sans-serif; margin: 1rem 2rem; }
+    #console { background: #111; color: #0f0; padding: 1rem; height: 400px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+    pre { background:#f4f4f4; padding:1rem; white-space:pre-wrap; }
+    .hidden { display:none; }
+    .success { color: #0b0; }
+    .fail { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>Recon Dashboard</h1>
+  <p><strong>Job ID:</strong> {{ job_id }}</p>
+  <p><strong>Query:</strong> {{ query }}</p>
+
+  <h2>Plan (tools to run)</h2>
+  <pre>{{ plan }}</pre>
+
+  <h2>Live Console</h2>
+  <div id="console"></div>
+
+  <p id="done" class="hidden">
+    ✅ Job finished. <a id="report-link" href="#">View Report</a>
+  </p>
+
+  <script>
+    const jobId = "{{ job_id }}";
+    const steps = {{ plan | safe }};
+
+    const ws = new WebSocket(`ws://${location.host}/ws/${jobId}`);
+    const consoleDiv = document.getElementById('console');
+    const doneP = document.getElementById('done');
+    const reportA = document.getElementById('report-link');
+
+    function log(line) {
+      consoleDiv.textContent += line + "\\n";
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({steps: steps}));
+      log("[*] WebSocket connected. Running job...");
+    };
+
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.event === "step_start") {
+        log(`\\n[+] STEP ${msg.idx}: ${msg.name}`);
+        log(`[cmd] ${msg.cmd}`);
+      } else if (msg.event === "stdout") {
+        log(msg.line.replace(/\\n$/, ''));
+      } else if (msg.event === "error") {
+        log("[ERROR] " + msg.error);
+      } else if (msg.event === "step_done") {
+        log(msg.success ? "[✓] Step done" : "[✗] Step failed");
+      } else if (msg.event === "job_done") {
+        log("\\n=== JOB COMPLETE ===");
+        doneP.classList.remove('hidden');
+        reportA.href = `/report/${jobId}`;
+      }
+    };
+
+    ws.onerror = (e) => {
+      log("[WS ERROR] " + e);
+    };
+    ws.onclose = () => {
+      log("[*] WebSocket closed");
+    };
+  </script>
+</body>
+</html>

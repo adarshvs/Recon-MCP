@@ -1,4 +1,6 @@
 fastapi
-uvicorn
+uvicorn[standard]
 jinja2
 requests
+python-multipart
+websockets

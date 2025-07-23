@@ -4,35 +4,17 @@
   <title>Recon MCP Interface</title>
   <style>
     body { font-family: sans-serif; margin: 2rem; }
-    pre  { background: #f4f4f4; padding: 1rem; white-space: pre-wrap; }
     input, button { font-size: 1rem; padding: 0.5rem; }
+    pre { background: #f4f4f4; padding: 1rem; white-space: pre-wrap; }
     h2 { margin-top: 1.5rem; }
   </style>
 </head>
 <body>
   <h1>Recon MCP Interface</h1>
-  <form method="post">
-    <input type="text" name="query" placeholder="e.g. find subdomains of example.com" size="60" required>
+  <p>Type what you want (e.g. “get everything on hackerone.com” or “get all details of 172.64.151.42”).</p>
+  <form action="/start" method="post">
+    <input type="text" name="query" placeholder="Your recon query" size="60" required>
     <button type="submit">Run</button>
   </form>
-
-  {% if query %}
-    <h2>📝 You Asked:</h2>
-    <pre>{{ query }}</pre>
-
-    <h2>💡 LLM Interpretation (Intent/Tool):</h2>
-    <pre>{{ llm_response }}</pre>
-
-    <h2>🔧 Command to Run:</h2>
-    <pre>{{ command }}</pre>
-
-    <h2>📤 Raw Output:</h2>
-    <pre>{{ output }}</pre>
-
-    {% if formatted_output %}
-      <h2>📄 Summary:</h2>
-      <pre>{{ formatted_output }}</pre>
-    {% endif %}
-  {% endif %}
 </body>
 </html>
