@@ -1,8 +1,14 @@
 import subprocess
 import json
 import re
+import platform
 
-ALLOWED_COMMANDS = ['whois', 'dig', 'nslookup']
+
+IS_MAC_OR_LINUX = platform.system() in ["Linux", "Darwin"]
+
+ALLOWED_COMMANDS = ['whois', 'dig', 'nslookup', 'traceroute']
+if not IS_MAC_OR_LINUX:
+    ALLOWED_COMMANDS.append('tracert')
 
 def query_llm(prompt: str) -> str:
     result = subprocess.run(
@@ -27,8 +33,8 @@ def parse_llm_response(llm_response: str):
     # Try to extract command inside backticks or from a heading
     command_patterns = [
         r'`{1,3}([a-zA-Z0-9\.\-\s/_]+)`{1,3}',  # backtick command
-        r'Command to Run:\s*\n?(.+)',            # under heading
-        r'\n([a-z]+ [a-zA-Z0-9\.\-]+\.com)\n'   # isolated command line
+        r'Command to Run:\s*\n?(.+)',
+        r'\n([a-z]+ [a-zA-Z0-9\.\-]+\.com)\n'
     ]
 
     command = None
@@ -41,7 +47,13 @@ def parse_llm_response(llm_response: str):
     if not command:
         command = "echo 'No command found.'"
     else:
-        # Extract just the binary (first word) and validate it
+        binary = command.split()[0].lower()
+
+        # OS-specific substitution
+        if binary == "tracert" and IS_MAC_OR_LINUX:
+            command = command.replace("tracert", "traceroute")
+
+        # Validate command
         binary = command.split()[0]
         if binary not in ALLOWED_COMMANDS:
             command = f"echo 'Blocked unsafe command: {binary}'"
@@ -63,6 +75,7 @@ def run_command(command: str) -> str:
         return f"Error: {str(e)}"
 
 def process_query(user_query: str):
+    # Step 1: Ask LLM to interpret
     prompt = f"""
 You're a recon assistant. Interpret the user's query, and return:
 - A short description of what it means
@@ -74,11 +87,19 @@ Command: <shell command>
 
 User query: {user_query}
 """
-    llm_response = query_llm(prompt)
-    description, command = parse_llm_response(llm_response)
+    llm_full_response = query_llm(prompt)
+    description, command = parse_llm_response(llm_full_response)
     output = run_command(command)
+
+    # Step 2: Only call summary LLM if output is valid and not a blocked/echoed command
+    formatted_output = ""
+    if command and not command.startswith("echo"):
+        summary_prompt = f"Summarize the following output:\n\n{output}"
+        formatted_output = query_llm(summary_prompt)
+
     return {
         "llm_response": description,
         "command": command,
-        "output": output
+        "output": output,
+        "formatted_output": formatted_output
     }

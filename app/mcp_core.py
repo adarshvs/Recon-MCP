@@ -46,3 +46,22 @@ def run_mcp_tool(tool_name, parameters):
         return response.get("result", stdout)
     except json.JSONDecodeError:
         return stdout or stderr
+
+def format_output_with_ollama(raw_output, original_prompt):
+    """Send raw tool output and user prompt to LLM for clean formatting."""
+    format_prompt = f"""
+You are a cybersecurity assistant. A user asked: "{original_prompt}"
+
+Below is the raw output from a recon or terminal tool. 
+Format this output into a clear, human-readable summary focusing on the key insights (e.g. DNS records, registrar, subdomains, vulnerabilities, etc.)
+
+Raw Output:
+{raw_output}
+"""
+    result = subprocess.run(
+        ["ollama", "run", "mistral"],
+        input=format_prompt.strip(),
+        capture_output=True,
+        text=True
+    )
+    return result.stdout.strip()

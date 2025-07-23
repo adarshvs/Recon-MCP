@@ -16,12 +16,20 @@
 
         <h2>💡 LLM Interpretation:</h2>
         <pre>{{ llm_response }}</pre>
-
         <h2>🔧 Command to Run:</h2>
         <pre>{{ command }}</pre>
+
+       {% if formatted_output %}
+  <h3>📄 Summary:</h3>
+  <pre>{{ formatted_output }}</pre>
+{% endif %}
+
+
+        
 
         <h2>📤 Tool Output:</h2>
         <pre>{{ output }}</pre>
     {% endif %}
+
 </body>
 </html>
