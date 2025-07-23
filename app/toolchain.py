@@ -32,7 +32,7 @@ def parse_llm_response(llm_response: str):
 
     # Try to extract command inside backticks or from a heading
     command_patterns = [
-        r'`{1,3}([a-zA-Z0-9\.\-\s/_]+)`{1,3}',  # backtick command
+        r'`{1,3}([a-zA-Z0-9\.\-\s/_]+)`{1,3}',  # command inside backticks
         r'Command to Run:\s*\n?(.+)',
         r'\n([a-z]+ [a-zA-Z0-9\.\-]+\.com)\n'
     ]
@@ -47,13 +47,16 @@ def parse_llm_response(llm_response: str):
     if not command:
         command = "echo 'No command found.'"
     else:
-        binary = command.split()[0].lower()
+        # 🧠 Fix known hallucinations or OS mismatches
+        command = command.lower().replace("trace route", "traceroute").replace("trace", "traceroute")
 
-        # OS-specific substitution
+        binary = command.split()[0]
+
+        # OS-aware substitution
         if binary == "tracert" and IS_MAC_OR_LINUX:
             command = command.replace("tracert", "traceroute")
 
-        # Validate command
+        # Re-validate allowed commands
         binary = command.split()[0]
         if binary not in ALLOWED_COMMANDS:
             command = f"echo 'Blocked unsafe command: {binary}'"
