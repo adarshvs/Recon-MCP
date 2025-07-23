@@ -1,29 +1,38 @@
 # external-recon/main.py
-
-import asyncio
-from mcp import Tool, run_server
+import sys
+import json
 import subprocess
 
-class DigTool(Tool):
-    name = "dig"
-    description = "Resolves DNS records"
-    parameters = {"domain": str}
+def handle_whois(params):
+    domain = params.get("domain")
+    result = subprocess.run(["whois", domain], capture_output=True, text=True)
+    return result.stdout
 
-    async def run(self, domain: str):
-        result = subprocess.run(["dig", domain], capture_output=True, text=True)
-        return {"output": result.stdout.strip()}
+def handle_dig(params):
+    domain = params.get("domain")
+    result = subprocess.run(["dig", domain], capture_output=True, text=True)
+    return result.stdout
 
-class WhoisTool(Tool):
-    name = "whois"
-    description = "Performs whois lookup"
-    parameters = {"domain": str}
+def main():
+    request = json.loads(sys.stdin.read())
+    
+    method = request.get("method")
+    params = request.get("params", {})
 
-    async def run(self, domain: str):
-        result = subprocess.run(["whois", domain], capture_output=True, text=True)
-        return {"output": result.stdout.strip()}
+    if method == "whois":
+        result = handle_whois(params)
+    elif method == "dig":
+        result = handle_dig(params)
+    else:
+        result = f"Unknown method: {method}"
 
-async def main():
-    await run_server([DigTool(), WhoisTool()])
+    response = {
+        "jsonrpc": "2.0",
+        "id": request.get("id"),
+        "result": result
+    }
+
+    print(json.dumps(response))
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

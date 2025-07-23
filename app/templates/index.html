@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recon MCP Web</title>
+</head>
+<body>
+    <h1>Recon MCP Interface</h1>
+    <form method="post">
+        <input type="text" name="query" placeholder="Enter your recon query">
+        <button type="submit">Run</button>
+    </form>
+
+    {% if query %}
+        <h2>📝 You Asked:</h2>
+        <p>{{ query }}</p>
+
+        <h2>💡 LLM Interpretation:</h2>
+        <pre>{{ llm_response }}</pre>
+
+        <h2>🔧 Command to Run:</h2>
+        <pre>{{ command }}</pre>
+
+        <h2>📤 Tool Output:</h2>
+        <pre>{{ output }}</pre>
+    {% endif %}
+</body>
+</html>
