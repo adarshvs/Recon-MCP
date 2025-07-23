@@ -1,38 +1,41 @@
-# external-recon/main.py
-import sys
-import json
-import subprocess
+#!/usr/bin/env python3
+import sys, json, subprocess
 
-def handle_whois(params):
-    domain = params.get("domain")
-    result = subprocess.run(["whois", domain], capture_output=True, text=True)
-    return result.stdout
+def whois_tool(params):
+    domain = params.get("domain","")
+    return subprocess.run(["whois", domain], capture_output=True, text=True).stdout
 
-def handle_dig(params):
-    domain = params.get("domain")
-    result = subprocess.run(["dig", domain], capture_output=True, text=True)
-    return result.stdout
+def dig_tool(params):
+    domain = params.get("domain","")
+    return subprocess.run(["dig", domain], capture_output=True, text=True).stdout
+
+TOOLS = {
+    "whois": whois_tool,
+    "dig":   dig_tool
+}
 
 def main():
-    request = json.loads(sys.stdin.read())
-    
-    method = request.get("method")
-    params = request.get("params", {})
+    req_raw = sys.stdin.read()
+    try:
+        req = json.loads(req_raw)
+    except json.JSONDecodeError:
+        print(json.dumps({"jsonrpc":"2.0","error":"Invalid JSON"}))
+        return
 
-    if method == "whois":
-        result = handle_whois(params)
-    elif method == "dig":
-        result = handle_dig(params)
-    else:
+    method = req.get("method","")
+    params = req.get("params",{})
+    func   = TOOLS.get(method)
+
+    if not func:
         result = f"Unknown method: {method}"
+    else:
+        try:
+            result = func(params)
+        except Exception as e:
+            result = str(e)
 
-    response = {
-        "jsonrpc": "2.0",
-        "id": request.get("id"),
-        "result": result
-    }
-
-    print(json.dumps(response))
+    resp = {"jsonrpc":"2.0","id":req.get("id"),"result":result}
+    print(json.dumps(resp))
 
 if __name__ == "__main__":
     main()

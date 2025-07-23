@@ -1,35 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Recon MCP Web</title>
+  <title>Recon MCP Interface</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    pre  { background: #f4f4f4; padding: 1rem; white-space: pre-wrap; }
+    input, button { font-size: 1rem; padding: 0.5rem; }
+    h2 { margin-top: 1.5rem; }
+  </style>
 </head>
 <body>
-    <h1>Recon MCP Interface</h1>
-    <form method="post">
-        <input type="text" name="query" placeholder="Enter your recon query">
-        <button type="submit">Run</button>
-    </form>
+  <h1>Recon MCP Interface</h1>
+  <form method="post">
+    <input type="text" name="query" placeholder="e.g. find subdomains of example.com" size="60" required>
+    <button type="submit">Run</button>
+  </form>
 
-    {% if query %}
-        <h2>📝 You Asked:</h2>
-        <p>{{ query }}</p>
+  {% if query %}
+    <h2>📝 You Asked:</h2>
+    <pre>{{ query }}</pre>
 
-        <h2>💡 LLM Interpretation:</h2>
-        <pre>{{ llm_response }}</pre>
-        <h2>🔧 Command to Run:</h2>
-        <pre>{{ command }}</pre>
+    <h2>💡 LLM Interpretation (Intent/Tool):</h2>
+    <pre>{{ llm_response }}</pre>
 
-       {% if formatted_output %}
-  <h3>📄 Summary:</h3>
-  <pre>{{ formatted_output }}</pre>
-{% endif %}
+    <h2>🔧 Command to Run:</h2>
+    <pre>{{ command }}</pre>
 
+    <h2>📤 Raw Output:</h2>
+    <pre>{{ output }}</pre>
 
-        
-
-        <h2>📤 Tool Output:</h2>
-        <pre>{{ output }}</pre>
+    {% if formatted_output %}
+      <h2>📄 Summary:</h2>
+      <pre>{{ formatted_output }}</pre>
     {% endif %}
-
+  {% endif %}
 </body>
 </html>

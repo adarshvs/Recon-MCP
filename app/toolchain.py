@@ -1,108 +1,183 @@
+import platform
 import subprocess
 import json
 import re
-import platform
+
+from app.mcp_core import call_ollama, run_mcp_tool, format_output_with_ollama
+
+# -------- Config --------
+SAFE_LOCAL_TOOLS = {
+    "subfinder": {"timeout": 90},
+    "nmap":      {"timeout": 120},
+    "httpx":     {"timeout": 60},
+    "wafw00f":   {"timeout": 40},
+    "whatweb":   {"timeout": 60},
+    "asnmap":    {"timeout": 30},
+    "traceroute":{"timeout": 60},
+    "tracert":   {"timeout": 60},
+    "dig":       {"timeout": 20},   # but we run dig/whois via MCP
+    "whois":     {"timeout": 20},   #   ^
+}
+
+# MCP-handled tools (JSON-RPC)
+MCP_TOOLS = {"whois", "dig"}
+
+# Quick keyword → intent/tool mapping
+KEYWORD_INTENTS = [
+    (r"\bsubdomains?\b",   ("subdomain_enum", "subfinder", "-d")),
+    (r"\bwhois\b",         ("whois",          "whois",     "")),
+    (r"\bdns\b|\bdig\b",   ("dns_recon",      "dig",       "")),
+    (r"\btraceroute\b|\btrace route\b|\btracert\b", ("dns_recon", "traceroute", "")),
+    (r"\bportscan\b|\bport scan\b|\bnmap\b",  ("port_scan","nmap",      "-sV -T4")),
+    (r"\bwaf\b|\bwafw00f\b", ("cdn_detection","wafw00f",   "")),
+    (r"\btech stack\b|\bwhatweb\b|\bwappalyzer\b", ("tech_fingerprint","whatweb","")),
+    (r"\basn\b|\basnmap\b", ("asn_lookup","asnmap","")),
+]
 
 
-IS_MAC_OR_LINUX = platform.system() in ["Linux", "Darwin"]
-
-ALLOWED_COMMANDS = ['whois', 'dig', 'nslookup', 'traceroute']
-if not IS_MAC_OR_LINUX:
-    ALLOWED_COMMANDS.append('tracert')
-
-def query_llm(prompt: str) -> str:
-    result = subprocess.run(
-        ["ollama", "run", "mistral"],
-        input=prompt.encode(),
-        capture_output=True
-    )
-    return result.stdout.decode().strip()
+def _extract_domain(text: str) -> str:
+    """Simple domain extractor."""
+    m = re.search(r"([a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,})", text)
+    return m.group(1) if m else text.strip()
 
 
-import re
-
-
-def parse_llm_response(llm_response: str):
+def recognize_intent(query: str) -> dict:
     """
-    Extracts a shell command from the LLM response and ensures it's a safe, supported one.
+    1) Keyword-based overrides (deterministic).
+    2) Regex for direct CLI commands (traceroute, whois, dig).
+    3) LLM fallback returning JSON.
     """
-    # Extract the description
-    description_match = re.search(r'Description:\s*(.+?)(?:\n|$)', llm_response, re.IGNORECASE)
-    description = description_match.group(1).strip() if description_match else "No description found."
+    # 1) Keyword overrides
+    for pattern, (intent, tool, flags) in KEYWORD_INTENTS:
+        if re.search(pattern, query, re.IGNORECASE):
+            domain = _extract_domain(query)
+            # Special case for traceroute/tracert OS
+            if tool in ("traceroute", "tracert"):
+                tool = _os_trace_tool()
+            return {
+                "intent": intent,
+                "tool":   tool,
+                "target": domain,
+                "flags":  flags
+            }
 
-    # Try to extract command inside backticks or from a heading
-    command_patterns = [
-        r'`{1,3}([a-zA-Z0-9\.\-\s/_]+)`{1,3}',  # command inside backticks
-        r'Command to Run:\s*\n?(.+)',
-        r'\n([a-z]+ [a-zA-Z0-9\.\-]+\.com)\n'
-    ]
+    # 2) Direct CLI command override
+    m = re.match(r'^\s*(traceroute|tracert|whois|dig)\s+(\S+)(?:\s+(.+))?$', query, re.IGNORECASE)
+    if m:
+        tool   = m.group(1).lower()
+        target = m.group(2)
+        flags  = m.group(3) or ""
+        if tool in ("traceroute", "tracert"):
+            tool = _os_trace_tool()
+        intent_map = {
+            "traceroute": "dns_recon",
+            "tracert":    "dns_recon",
+            "whois":      "whois",
+            "dig":        "dns_recon",
+        }
+        return {
+            "intent": intent_map.get(tool, "dns_recon"),
+            "tool":   tool,
+            "target": target,
+            "flags":  flags.strip()
+        }
 
-    command = None
-    for pattern in command_patterns:
-        match = re.search(pattern, llm_response, re.IGNORECASE)
-        if match:
-            command = match.group(1).strip()
-            break
+    # 3) LLM fallback
+    prompt = f"""
+You are a pentesting recon assistant. Given the user's request, output valid JSON:
+{{
+  "intent": one of ["subdomain_enum","port_scan","dns_recon","whois","cdn_detection","tech_fingerprint","asn_lookup"],
+  "tool":   the CLI tool to run (e.g. "subfinder","nmap","dig","whois","wafw00f","traceroute","asnmap","whatweb"),
+  "target": the domain or IP string,
+  "flags":  optional flags string
+}}
+Respond ONLY with JSON.
+User request: "{query}"
+"""
+    llm_txt = call_ollama(prompt)
+    try:
+        return json.loads(llm_txt)
+    except Exception:
+        # final minimal fallback
+        return {"intent": "whois", "tool": "whois", "target": _extract_domain(query), "flags": ""}
 
-    if not command:
-        command = "echo 'No command found.'"
-    else:
-        # 🧠 Fix known hallucinations or OS mismatches
-        command = command.lower().replace("trace route", "traceroute").replace("trace", "traceroute")
 
-        binary = command.split()[0]
+def _os_trace_tool() -> str:
+    """Return traceroute variant for this OS."""
+    os_name = platform.system().lower()
+    return "tracert" if os_name == "windows" else "traceroute"
 
-        # OS-aware substitution
-        if binary == "tracert" and IS_MAC_OR_LINUX:
-            command = command.replace("tracert", "traceroute")
 
-        # Re-validate allowed commands
-        binary = command.split()[0]
-        if binary not in ALLOWED_COMMANDS:
-            command = f"echo 'Blocked unsafe command: {binary}'"
-
-    return description, command
+def _build_command(tool: str, target: str, flags: str) -> str:
+    """Build the final shell command string."""
+    tool = tool.strip()
+    flags = flags.strip()
+    target = target.strip()
+    parts = [tool]
+    if flags:
+        parts.append(flags)
+    if target:
+        # special case subfinder: expects -d domain
+        if tool == "subfinder" and "-d" not in flags:
+            parts.extend(["-d", target])
+        else:
+            parts.append(target)
+    return " ".join(parts)
 
 
 def run_command(command: str) -> str:
+    """Run a local command safely with timeout and return string output."""
+    base = command.split()[0]
+    timeout = SAFE_LOCAL_TOOLS.get(base, {}).get("timeout", 30)
     try:
-        result = subprocess.run(
+        res = subprocess.run(
             command,
             shell=True,
             capture_output=True,
             text=True,
-            timeout=15
+            timeout=timeout
         )
-        return result.stdout or result.stderr
+        output = res.stdout or res.stderr
+    except subprocess.TimeoutExpired:
+        output = f"Command timed out after {timeout} seconds"
     except Exception as e:
-        return f"Error: {str(e)}"
+        output = str(e)
+    if isinstance(output, (bytes, bytearray)):
+        output = output.decode("utf-8", errors="ignore")
+    return output
 
-def process_query(user_query: str):
-    # Step 1: Ask LLM to interpret
-    prompt = f"""
-You're a recon assistant. Interpret the user's query, and return:
-- A short description of what it means
-- A suitable command to run for reconnaissance
 
-Format:
-Description: <summary>
-Command: <shell command>
+def process_query(query: str):
+    # Step 1: decide what to do
+    intent = recognize_intent(query)
+    tool   = intent.get("tool", "whois")
+    target = intent.get("target", query)
+    flags  = intent.get("flags", "")
 
-User query: {user_query}
-"""
-    llm_full_response = query_llm(prompt)
-    description, command = parse_llm_response(llm_full_response)
-    output = run_command(command)
+    # Step 2: dispatch
+    if tool in MCP_TOOLS:
+        output  = run_mcp_tool(tool, {"domain": target})
+        command = f"{tool} {target}"
+    elif tool in ("traceroute", "tracert"):
+        # force OS-appropriate traceroute syntax
+        tool = _os_trace_tool()
+        # skip DNS lookups for speed
+        flags = "-n" if tool == "traceroute" else "-d"
+        command = _build_command(tool, target, flags)
+        output  = run_command(command)
+    else:
+        command = _build_command(tool, target, flags)
+        output  = run_command(command)
 
-    # Step 2: Only call summary LLM if output is valid and not a blocked/echoed command
-    formatted_output = ""
-    if command and not command.startswith("echo"):
-        summary_prompt = f"Summarize the following output:\n\n{output}"
-        formatted_output = query_llm(summary_prompt)
+    # Step 3: summarize
+    summary = ""
+    low = output.lower() if isinstance(output, str) else ""
+    if output and "timed out" not in low and "unknown command" not in low:
+        summary = format_output_with_ollama(output, query)
 
     return {
-        "llm_response": description,
+        "llm_response": intent,   # show JSON so you can see what it decided
         "command": command,
         "output": output,
-        "formatted_output": formatted_output
+        "formatted_output": summary
     }
