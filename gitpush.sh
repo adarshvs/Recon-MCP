@@ -21,7 +21,7 @@ git add .
 if git diff --cached --quiet; then
   echo "✅ Nothing to commit."
 else
-  git commit -m "$commit_msg"
+  git commit -m "hi"
 fi
 
 # Ensure main branch is tracked
