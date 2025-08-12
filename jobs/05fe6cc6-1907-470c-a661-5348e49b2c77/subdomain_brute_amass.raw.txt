@@ -1,1 +1,0 @@
-Command '/Volumes/Ext-SSD/Tools/bin/amass enum -d hackerone.com -brute -w /Volumes/Ext-SSD/Tools/seclists/Discovery/dns/subdomains-top1million-5000.txt -o /Users/adarshvs/Documents/mcp-offsec/jobs/05fe6cc6-1907-470c-a661-5348e49b2c77/amass.txt' timed out after 120 seconds
