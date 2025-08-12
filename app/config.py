@@ -1,37 +1,27 @@
-# app/config.py
+from pathlib import Path
 
-# ---- Local LLM ----
-LLM_MODEL = "llama3.1:8b"  # you have this pulled
-
-# ---- Absolute tool paths (from your message) ----
-TOOL_PATHS = {
-    "amass":     "/Volumes/Ext-SSD/Tools/bin/amass",
-    "asnmap":    "/Volumes/Ext-SSD/Tools/bin/asnmap",
-    "dnsx":      "/Volumes/Ext-SSD/Tools/bin/dnsx",
-    "ffuf":      "/Volumes/Ext-SSD/Tools/bin/ffuf",
-    "gowitness": "/Volumes/Ext-SSD/Tools/bin/gowitness",
-    "httpx":     "/Volumes/Ext-SSD/Tools/bin/httpx",
-    "knockpy":   "/Volumes/Ext-SSD/Tools/bin/knockpy",
-    "masscan":   "/Volumes/Ext-SSD/Tools/bin/masscan",
-    "naabu":     "/Volumes/Ext-SSD/Tools/bin/naabu",
-    "nmap":      "/Volumes/Ext-SSD/Tools/bin/nmap",
-    "nuclei":    "/Volumes/Ext-SSD/Tools/bin/nuclei",
-    "rustscan":  "/Volumes/Ext-SSD/Tools/bin/rustscan",
+# Adjust if you move things
+TOOLS = {
     "subfinder": "/Volumes/Ext-SSD/Tools/bin/subfinder",
+    "dnsx":      "/Volumes/Ext-SSD/Tools/bin/dnsx",
+    "httpx":     "/Volumes/Ext-SSD/Tools/bin/httpx",
     "wafw00f":   "/Volumes/Ext-SSD/Tools/bin/wafw00f",
     "whatweb":   "/Volumes/Ext-SSD/Tools/bin/whatweb",
-
-    # system tools
-    "traceroute": "traceroute",
-    "tracert":    "tracert",
-    "whois":      "whois",
-    "dig":        "dig",
+    "nuclei":    "/Volumes/Ext-SSD/Tools/bin/nuclei",
+    "nmap":      "/Volumes/Ext-SSD/Tools/bin/nmap",
+    "amass":     "/Volumes/Ext-SSD/Tools/bin/amass",
+    # add more as you wire them (masscan, rustscan, ffuf, gowitness…)
 }
 
-# ---- Extra resources ----
-SECLISTS_DIR       = "/Volumes/Ext-SSD/Tools/seclists"
-NUCLEI_TEMPLATES   = "/Volumes/Ext-SSD/Tools/nuclei-templates"
-NUCLEI_CONFIG_FILE = "/Volumes/Ext-SSD/Tools/nuclei-config/nuclei-config.yaml"
+BASE_DIR        = Path(__file__).resolve().parent.parent
+JOBS_DIR        = BASE_DIR / "jobs"
+JOBS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Where to store job outputs/reports
-WORK_DIR = "jobs"  # will be created if missing
+# Paths you printed earlier
+SECLISTS_DIR    = Path("/Volumes/Ext-SSD/Tools/seclists")
+NUCLEI_TEMPLATES= Path("/Volumes/Ext-SSD/Tools/nuclei-templates")
+NUCLEI_CONFIG   = Path("/Volumes/Ext-SSD/Tools/nuclei-config/nuclei-config.yaml")
+
+DEFAULT_TIMEOUT = 120  # seconds per step
+OLLAMA_MODEL    = "llama3.1:8b"   # change if you load a better one
+OLLAMA_URL      = "http://127.0.0.1:11434/api/generate"

@@ -1,0 +1,11 @@
+
+      _             __  __
+   __| | _ __   ___ \ \/ /
+  / _' || '_ \ / __| \  / 
+ | (_| || | | |\__ \ /  \ 
+  \__,_||_| |_||___//_/\_\
+
+		projectdiscovery.io
+
+[INF] Current dnsx version 1.2.2 (latest)
+[FTL] missing wordlist(w) flag required with domain(d) input

@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Job {{ job.id }}</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #eee; }
+    #log { white-space: pre-wrap; background: #000; padding: 1rem; height: 50vh; overflow-y: auto; }
+    table { width: 100%; color: #ddd; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #333; padding: .25rem .5rem; }
+  </style>
+</head>
+<body>
+  <h2>Job {{ job.id }}</h2>
+  <p>Query: <b>{{ job.query }}</b></p>
+  <p>Status: {{ job.status }}</p>
+  <p><a href="{% url 'job_report' job.id %}">View Report</a> | <a href="{% url 'jobs_list' %}">Back</a></p>
+
+  <div id="log"></div>
+
+  <h3>Steps</h3>
+  <table>
+    <tr><th>#</th><th>Name</th><th>Status</th><th>Exit</th><th>Reason</th></tr>
+    {% for s in job.steps.all %}
+      <tr id="row-{{ s.id }}">
+        <td>{{ s.order }}</td>
+        <td>{{ s.name }}</td>
+        <td class="status">{{ s.status }}</td>
+        <td class="exit">{{ s.exit_code }}</td>
+        <td class="reason">{{ s.reason }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+<script>
+  const log = document.getElementById("log");
+  const ws = new WebSocket(`ws://${location.host}/ws/job/{{ job.id }}/`);
+  const rows = {};
+
+  document.querySelectorAll("tr[id^='row-']").forEach(tr => {
+    rows[tr.id.replace('row-','')] = tr;
+  });
+
+  ws.onopen = () => append("[*] Connected\n");
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    switch (msg.event) {
+      case "connected":
+        append("[*] Job stream ready\n"); break;
+      case "step_start":
+        append(`\n[+] ${msg.step} ...\n`); break;
+      case "stream":
+        append(`[${msg.stream}] ${msg.data}`); break; // (we don’t emit in this consumer; reserve for future)
+      case "step_end":
+        append(`[-] ${msg.step} -> ${msg.status} (exit ${msg.exit})\n`);
+        break;
+      case "job_done":
+        append(`\n[✓] Job done. Status: ${msg.status}\n`);
+        break;
+    }
+  };
+  ws.onclose = () => append("[*] Disconnected\n");
+
+  function append(t) {
+    log.textContent += t;
+    log.scrollTop = log.scrollHeight;
+  }
+</script>
+<script>
+const jobId = "{{ job.id }}";
+const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/job/${jobId}/`);
+</script>
+
+</body>
+</html>

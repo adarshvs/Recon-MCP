@@ -1,0 +1,39 @@
+
+      _             __  __
+   __| | _ __   ___ \ \/ /
+  / _' || '_ \ / __| \  / 
+ | (_| || | | |\__ \ /  \ 
+  \__,_||_| |_||___//_/\_\
+
+		projectdiscovery.io
+
+[[34mINF[0m] Current dnsx version 1.2.2 ([92mlatest[0m)
+b.ns.hackerone.com [[35mA[0m] [[32m162.159.1.31[0m] 
+api.hackerone.com [[35mA[0m] [[32m104.18.36.214[0m] 
+api.hackerone.com [[35mA[0m] [[32m172.64.151.42[0m] 
+mta-sts.forwarding.hackerone.com [[35mA[0m] [[32m185.199.109.153[0m] 
+mta-sts.forwarding.hackerone.com [[35mA[0m] [[32m185.199.108.153[0m] 
+mta-sts.forwarding.hackerone.com [[35mA[0m] [[32m185.199.110.153[0m] 
+mta-sts.forwarding.hackerone.com [[35mA[0m] [[32m185.199.111.153[0m] 
+www.hackerone.com [[35mA[0m] [[32m172.64.151.42[0m] 
+www.hackerone.com [[35mA[0m] [[32m104.18.36.214[0m] 
+mta-sts.managed.hackerone.com [[35mA[0m] [[32m185.199.108.153[0m] 
+mta-sts.managed.hackerone.com [[35mA[0m] [[32m185.199.110.153[0m] 
+mta-sts.managed.hackerone.com [[35mA[0m] [[32m185.199.111.153[0m] 
+mta-sts.managed.hackerone.com [[35mA[0m] [[32m185.199.109.153[0m] 
+support.hackerone.com [[35mA[0m] [[32m162.159.140.147[0m] 
+support.hackerone.com [[35mA[0m] [[32m172.66.0.145[0m] 
+mta-sts.hackerone.com [[35mA[0m] [[32m185.199.108.153[0m] 
+mta-sts.hackerone.com [[35mA[0m] [[32m185.199.109.153[0m] 
+mta-sts.hackerone.com [[35mA[0m] [[32m185.199.110.153[0m] 
+mta-sts.hackerone.com [[35mA[0m] [[32m185.199.111.153[0m] 
+gslink.hackerone.com [[35mA[0m] [[32m18.161.246.89[0m] 
+gslink.hackerone.com [[35mA[0m] [[32m18.161.246.72[0m] 
+gslink.hackerone.com [[35mA[0m] [[32m18.161.246.27[0m] 
+gslink.hackerone.com [[35mA[0m] [[32m18.161.246.74[0m] 
+resources.hackerone.com [[35mA[0m] [[32m52.60.165.183[0m] 
+resources.hackerone.com [[35mA[0m] [[32m3.98.63.202[0m] 
+resources.hackerone.com [[35mA[0m] [[32m52.60.160.16[0m] 
+docs.hackerone.com [[35mA[0m] [[32m104.18.36.214[0m] 
+docs.hackerone.com [[35mA[0m] [[32m172.64.151.42[0m] 
+a.ns.hackerone.com [[35mA[0m] [[32m162.159.0.31[0m] 

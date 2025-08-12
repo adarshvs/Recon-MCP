@@ -1,15 +1,12 @@
-# app/main.py
-import json
-import os
-from fastapi import FastAPI, Request, Form, WebSocket, WebSocketDisconnect
+import uuid
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from app.toolchain import decide_intent_target
-from app.pipeline import make_pipeline
-from app.runner import run_job, JOBS
-from app.mcp_core import format_output_with_ollama
-from app.config import WORK_DIR
+from .toolchain import (
+    classify_and_plan, create_job, run_job,
+    get_job_report
+)
 
 app = FastAPI()
 templates = Jinja2Templates(directory="app/templates")
@@ -19,59 +16,43 @@ async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/start", response_class=HTMLResponse)
-async def start(request: Request, query: str = Form(...)):
-    parsed = decide_intent_target(query)
-    plan = make_pipeline(query, parsed["target"], parsed["intent"])
-    # Render dashboard page with job info, will open WS
-    return templates.TemplateResponse("job.html", {
+async def start_job(request: Request):
+    form = await request.form()
+    query = form.get("query", "").strip()
+    jid = str(uuid.uuid4())
+
+    plan_info = classify_and_plan(query)
+    meta = create_job(query, plan_info, jid)
+
+    return templates.TemplateResponse("dashboard.html", {
         "request": request,
+        "job_id": jid,
         "query": query,
-        "job_id": plan["job_id"],
-        "plan": json.dumps(plan["steps"], indent=2)
+        "plan_json": plan_info
     })
 
 @app.websocket("/ws/{job_id}")
-async def ws_job(websocket: WebSocket, job_id: str):
-    await websocket.accept()
-
-    async def send_json(payload):
-        await websocket.send_text(json.dumps(payload))
-
+async def ws_job(ws: WebSocket, job_id: str):
+    await ws.accept()
     try:
-        # First message from client should contain 'steps'
-        data = await websocket.receive_text()
-        payload = json.loads(data)
-        steps = payload["steps"]
-        # run and stream
-        await run_job(job_id, steps, send_json)
+        # load meta and run
+        from .toolchain import load_meta   # lazy import to avoid cycles
+        meta = load_meta(job_id)
+        await run_job(meta, ws)
     except WebSocketDisconnect:
-        pass
+        # client closed, just stop streaming
+        return
+    except Exception as e:
+        await ws.send_text(f'{{"event":"error","msg":"{str(e)}"}}')
+    finally:
+        await ws.close()
 
 @app.get("/report/{job_id}", response_class=HTMLResponse)
-async def report(request: Request, job_id: str):
-    job = JOBS.get(job_id)
-    if not job:
-        return HTMLResponse("No such job", status_code=404)
-
-    # Build a human-readable report (could be improved with templates)
-    successes = []
-    fails = []
-    for s in job["steps"]:
-        if s["success"]:
-            successes.append(s)
-        else:
-            fails.append(s)
-
-    # Combine raw outputs & ask LLM for global summary
-    raw_all = "\n\n".join([f"== {st['name']} ==\n{st['raw_output']}" for st in successes])
-    context = f"User requested a full recon job {job_id}"
-    global_summary = format_output_with_ollama(raw_all, context) if raw_all else ""
-
+async def report(job_id: str, request: Request):
+    meta, report = get_job_report(job_id)
     return templates.TemplateResponse("report.html", {
         "request": request,
-        "job": job,
         "job_id": job_id,
-        "successes": successes,
-        "fails": fails,
-        "global_summary": global_summary
+        "meta": meta,
+        "report": report
     })

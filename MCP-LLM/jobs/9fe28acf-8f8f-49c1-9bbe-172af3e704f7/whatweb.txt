@@ -1,0 +1,2 @@
+usage: whatweb [-h] target
+whatweb: error: unrecognized arguments: -a https://hackerone.com

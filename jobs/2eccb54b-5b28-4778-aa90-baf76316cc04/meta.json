@@ -1,0 +1,33 @@
+{
+  "job_id": "2eccb54b-5b28-4778-aa90-baf76316cc04",
+  "query": "dig hackerone.com",
+  "plan": [
+    {
+      "name": "Resolve & grab A records (dnsx)",
+      "cmd": "/Volumes/Ext-SSD/Tools/bin/dnsx -l /Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/subdomains.txt -a -resp -o /Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/alive_dns.txt",
+      "outfile": "/Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/alive_dns.txt",
+      "status": "ok",
+      "exit_code": 0,
+      "reason": null
+    },
+    {
+      "name": "Probe HTTP(S) (httpx)",
+      "cmd": "/Volumes/Ext-SSD/Tools/bin/httpx -l /Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/alive_dns.txt -status-code -title -tech-detect -no-color -o /Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/httpx.txt",
+      "outfile": "/Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/httpx.txt",
+      "status": "ok",
+      "exit_code": 0,
+      "reason": null
+    },
+    {
+      "name": "SSL Cert Info (nmap ssl-cert)",
+      "cmd": "/Volumes/Ext-SSD/Tools/bin/nmap --script ssl-cert -p 443 hackerone.com -oN /Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/cert.txt",
+      "outfile": "/Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/cert.txt",
+      "status": "ok",
+      "exit_code": 0,
+      "reason": null
+    }
+  ],
+  "started": "2025-07-23T19:19:58.558326",
+  "finished": "2025-07-23T19:20:05.050646",
+  "summary": "Here are the summarized recon steps and outputs based on the provided JSON input:\n\n**Recon Steps:**\n\n1. **Resolve & grab A records (dnsx)**:\n\t* Command: `dnsx` with options `-l`, `-a`, `-resp`, and `-o`\n\t* Output file: `/Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/alive_dns.txt`\n\t* Status: `ok`\n2. **Probe HTTP(S) (httpx)**:\n\t* Command: `httpx` with options `-l`, `-status-code`, `-title`, `-tech-detect`, and `-no-color`\n\t* Output file: `/Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/httpx.txt`\n\t* Status: `ok`\n3. **SSL Cert Info (nmap ssl-cert)**:\n\t* Command: `nmap` with script `ssl-cert` and options `-p 443` and `-oN`\n\t* Output file: `/Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/cert.txt`\n\t* Status: `ok`\n\n**Outputs:**\n\n1. **A records**: Not specified in the provided JSON output.\n2. **HTTP(S) status codes and tech stacks**: Provided in `/Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/httpx.txt`\n3. **SSL Cert Info**: Provided in `/Users/adarshvs/Documents/mcp-offsec/jobs/2eccb54b-5b28-4778-aa90-baf76316cc04/cert.txt`\n\n**Potential Issues:**\n\nNot specified in the provided JSON output.\n\n**Count Successes vs Failures and Reasons:**\n\n* All three steps were successful, with no failures or reasons mentioned."
+}

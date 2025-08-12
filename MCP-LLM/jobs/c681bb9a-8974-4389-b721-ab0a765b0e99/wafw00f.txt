@@ -1,0 +1,13 @@
+
+                 ?              ,.   (   .      )        .      "
+         __        ??          ("     )  )'     ,'        )  . (`     '`
+    (___()'`;   ???          .; )  ' (( (" )    ;(,     ((  (  ;)  "  )")
+    /,___ /`                 _"., ,._'_.,)_(..,( . )_  _' )_') (. _..( ' )
+    \\   \\                 |____|____|____|____|____|____|____|____|____|
+
+                                ~ WAFW00F : v2.3.1 ~
+                    ~ Sniffing Web Application Firewalls since 2014 ~
+
+[*] Checking https://hackerone.com
+[+] The site https://hackerone.com is behind Cloudflare (Cloudflare Inc.) WAF.
+[~] Number of requests: 2

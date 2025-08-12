@@ -1,46 +1,64 @@
-# app/mcp_core.py
+import os
+import re
 import json
-import subprocess
-from typing import Any, Dict
+import requests
+from typing import Any, Dict, Optional
 
-from app.config import LLM_MODEL
+OLLAMA_URL   = os.getenv("OLLAMA_URL",   "http://127.0.0.1:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 
-def call_ollama(prompt: str, model: str = LLM_MODEL) -> str:
-    proc = subprocess.run(
-        ["ollama", "run", model],
-        input=prompt.encode("utf-8"),
-        capture_output=True
-    )
-    return proc.stdout.decode("utf-8", errors="ignore").strip()
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[mK]")
 
-def call_ollama_json(prompt: str, model: str = LLM_MODEL) -> Dict[str, Any]:
-    txt = call_ollama(prompt, model=model)
+def strip_ansi(s: str) -> str:
+    return _ANSI_RE.sub("", s or "")
+
+def safe_json_parse(txt: str, default: Any = None) -> Any:
+    """Try very hard to get a JSON object out of an LLM answer."""
+    if not txt:
+        return default
+    txt = strip_ansi(txt).strip()
+
+    # remove common fences
+    txt = re.sub(r"^```(?:json)?", "", txt, flags=re.I).strip()
+    txt = re.sub(r"```$", "", txt, flags=re.M).strip()
+
+    # direct parse
     try:
         return json.loads(txt)
-    except json.JSONDecodeError:
-        return {}
+    except Exception:
+        pass
 
-def format_output_with_ollama(raw_output: str, context: str, model: str = LLM_MODEL) -> str:
-    prompt = f"""
-You are a cybersecurity recon assistant. The user asked: "{context}"
+    # crude last-brace chunk
+    if "{" in txt and "}" in txt:
+        blob = txt[txt.find("{"): txt.rfind("}") + 1]
+        try:
+            return json.loads(blob)
+        except Exception:
+            pass
 
-RAW tool output:
-{raw_output}
+    return default
 
-Summarize key findings clearly (IPs, ports, tech stacks, WAF/CDN, interesting endpoints). 
-Bullet points are fine. Keep it concise.
-"""
-    return call_ollama(prompt, model=model)
+def call_ollama(prompt: str,
+                model: Optional[str] = None,
+                json_mode: bool = False,
+                options: Optional[Dict[str, Any]] = None) -> str:
+    """
+    One-shot call to Ollama (no streaming). Returns the raw 'response' text.
+    """
+    payload: Dict[str, Any] = {
+        "model": model or OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+    }
+    if json_mode:
+        payload["format"] = "json"
+    if options:
+        payload.update(options)
 
-def run_mcp_tool(tool_name: str, parameters: Dict[str, Any]) -> str:
-    request = {"jsonrpc": "2.0", "id": 1, "method": tool_name, "params": parameters}
-    proc = subprocess.Popen(
-        ["python3", "external-recon/main.py"],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-    )
-    stdout, stderr = proc.communicate(json.dumps(request) + "\n")
+    r = requests.post(f"{OLLAMA_URL}/api/generate", json=payload, timeout=180)
+    # Happy path
     try:
-        resp = json.loads(stdout)
-        return resp.get("result", stdout)
-    except json.JSONDecodeError:
-        return stdout or stderr
+        j = r.json()
+        return j.get("response", r.text)
+    except Exception:
+        return strip_ansi(r.text)

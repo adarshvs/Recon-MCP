@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Report {{ job.id }}</title></head>
+<body>
+  <h2>Recon Report</h2>
+  <p><b>Job:</b> {{ job.id }}</p>
+  <p><b>Query:</b> {{ job.query }}</p>
+  <p><b>Status:</b> {{ job.status }}</p>
+  <h3>Summary</h3>
+  <pre>{{ job.summary|default:"(Not generated yet)" }}</pre>
+
+  <h3>Steps</h3>
+  <ul>
+    {% for s in job.steps.all %}
+      <li>
+        <b>{{ s.order }}. {{ s.name }}</b> — {{ s.status }} (exit {{ s.exit_code }})
+        {% if s.stdout_path %}
+          <div><a href="file://{{ s.stdout_path }}">stdout</a> | <a href="file://{{ s.stderr_path }}">stderr</a></div>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  <p><a href="{% url 'job_detail' job.id %}">&larr; Back</a></p>
+</body>
+</html>

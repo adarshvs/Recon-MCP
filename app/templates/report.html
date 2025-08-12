@@ -1,39 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Recon Report - {{ job_id }}</title>
+  <meta charset="utf-8" />
+  <title>Recon Report</title>
   <style>
-    body { font-family:sans-serif; margin:2rem;}
-    pre { background:#f4f4f4; padding:1rem; white-space:pre-wrap;}
-    .success { color:#0b0;}
-    .fail { color:#c00;}
+    body{font-family:sans-serif;margin:2rem;}
+    pre{background:#f4f4f4;padding:1rem;white-space:pre-wrap;}
+    table{border-collapse:collapse;width:100%;margin-top:1rem;}
+    th,td{border:1px solid #ccc;padding:.4rem;text-align:left;font-size:.9rem;}
   </style>
 </head>
 <body>
   <h1>Recon Report</h1>
-  <p><strong>Job ID:</strong> {{ job_id }}</p>
-  <p><strong>Started:</strong> {{ job.started }}</p>
-  <p><strong>Finished:</strong> {{ job.finished }}</p>
+  <p><b>Job ID:</b> {{ job_id }}</p>
+  <p><b>Started:</b> {{ meta.started }}</p>
+  <p><b>Finished:</b> {{ meta.finished }}</p>
 
   <h2>Global Summary</h2>
-  <pre>{{ global_summary }}</pre>
+  <pre>{{ report.summary }}</pre>
 
-  <h2>Successful Steps ({{ successes|length }})</h2>
-  {% for s in successes %}
-    <h3 class="success">{{ s.name }}</h3>
-    <p><strong>Command:</strong> {{ s.cmd }}</p>
-    {% if s.outfile %}<p><strong>Output file:</strong> {{ s.outfile }}</p>{% endif %}
-    <details>
-      <summary>Raw Output</summary>
-      <pre>{{ s.raw_output }}</pre>
-    </details>
-  {% endfor %}
+  <h2>Steps</h2>
+  <table>
+    <thead><tr><th>Name</th><th>Status</th><th>Exit</th><th>Reason</th><th>Outfile</th></tr></thead>
+    <tbody>
+      {% for s in report.steps %}
+      <tr>
+        <td>{{ s.name }}</td>
+        <td>{{ s.status }}</td>
+        <td>{{ s.exit_code }}</td>
+        <td>{{ s.reason or "" }}</td>
+        <td>{{ s.outfile or "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-  <h2>Failed Steps ({{ fails|length }})</h2>
-  {% for s in fails %}
-    <h3 class="fail">{{ s.name }}</h3>
-    <p><strong>Command:</strong> {{ s.cmd }}</p>
-    <p><strong>Error:</strong> {{ s.error }}</p>
-  {% endfor %}
+  <p><a href="/">← Back</a></p>
 </body>
 </html>

@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8" />
   <title>Recon MCP Interface</title>
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    input, button { font-size: 1rem; padding: 0.5rem; }
-    pre { background: #f4f4f4; padding: 1rem; white-space: pre-wrap; }
-    h2 { margin-top: 1.5rem; }
+    body{font-family:sans-serif;margin:2rem;}
+    input,button{font-size:1rem;padding:.5rem;}
+    pre{background:#f4f4f4;padding:1rem;white-space:pre-wrap;}
   </style>
 </head>
 <body>
   <h1>Recon MCP Interface</h1>
-  <p>Type what you want (e.g. “get everything on hackerone.com” or “get all details of 172.64.151.42”).</p>
-  <form action="/start" method="post">
-    <input type="text" name="query" placeholder="Your recon query" size="60" required>
+  <form method="post" action="/start">
+    <input type="text" name="query" placeholder="e.g. get everything on tesla.com" size="60" required />
     <button type="submit">Run</button>
   </form>
 </body>

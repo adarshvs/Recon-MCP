@@ -3,72 +3,74 @@
 <head>
   <title>Recon Dashboard</title>
   <style>
-    body { font-family: sans-serif; margin: 1rem 2rem; }
-    #console { background: #111; color: #0f0; padding: 1rem; height: 400px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
-    pre { background:#f4f4f4; padding:1rem; white-space:pre-wrap; }
-    .hidden { display:none; }
-    .success { color: #0b0; }
-    .fail { color: #c00; }
+    body{font-family:sans-serif;margin:1rem;}
+    pre{background:#111;color:#eee;padding:1rem;white-space:pre-wrap;height:250px;overflow:auto;}
+    .ok{color:green}
+    .fail{color:red}
+    .timeout{color:orange}
+    .running{color:blue}
+    .pending{color:gray}
+    #steps td{padding:4px 8px;}
   </style>
 </head>
 <body>
-  <h1>Recon Dashboard</h1>
-  <p><strong>Job ID:</strong> {{ job_id }}</p>
-  <p><strong>Query:</strong> {{ query }}</p>
+<h1>Recon Dashboard</h1>
 
-  <h2>Plan (tools to run)</h2>
-  <pre>{{ plan }}</pre>
+<p><b>Job ID:</b> {{ job_id }}</p>
+<p><b>Query:</b> {{ query }}</p>
 
-  <h2>Live Console</h2>
-  <div id="console"></div>
+<h2>Plan (tools to run)</h2>
+<pre id="plan">{{ plan }}</pre>
 
-  <p id="done" class="hidden">
-    ✅ Job finished. <a id="report-link" href="#">View Report</a>
-  </p>
+<h2>Live Console</h2>
+<pre id="console">Connecting...</pre>
 
-  <script>
-    const jobId = "{{ job_id }}";
-    const steps = {{ plan | safe }};
+<h2>Steps</h2>
+<table id="steps" border="1" cellspacing="0">
+  <tr><th>Step</th><th>Status</th></tr>
+  {% for s in plan | safe | load %}
+  <tr id="row-{{ s['name']|replace(' ','_') }}"><td>{{ s['name'] }}</td><td class="pending">pending</td></tr>
+  {% endfor %}
+</table>
 
-    const ws = new WebSocket(`ws://${location.host}/ws/${jobId}`);
-    const consoleDiv = document.getElementById('console');
-    const doneP = document.getElementById('done');
-    const reportA = document.getElementById('report-link');
+<p id="done" style="display:none;">
+  <a href="/report/{{ job_id }}">View Final Report</a>
+</p>
 
-    function log(line) {
-      consoleDiv.textContent += line + "\\n";
-      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+<script>
+const jobId = "{{ job_id }}";
+const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+const ws = new WebSocket(`${proto}://${location.host}/ws/${jobId}`);
+
+const consoleBox = document.getElementById("console");
+
+ws.onmessage = (evt)=>{
+  try{
+    const msg = JSON.parse(evt.data);
+    if(msg.stream){
+      consoleBox.textContent += `[${msg.step}][${msg.stream}] ${msg.data}`;
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+    }else if(msg.event==="step_start"){
+      const row = document.getElementById("row-"+msg.step.replace(/ /g,"_"));
+      if(row) row.children[1].className="running", row.children[1].innerText="running";
+    }else if(msg.event==="step_end"){
+      const row = document.getElementById("row-"+msg.step.replace(/ /g,"_"));
+      if(row) row.children[1].className=msg.status, row.children[1].innerText=msg.status;
+    }else if(msg.event==="done"){
+      document.getElementById("done").style.display="block";
+      consoleBox.textContent += "\n[+] Job done.";
+    }else if(msg.event==="fatal"){
+      consoleBox.textContent += "\n[FATAL] "+msg.error;
     }
+  }catch(e){
+    consoleBox.textContent += "\n[WS RAW] "+evt.data;
+  }
+}
+ws.onerror = (e)=>{
+  consoleBox.textContent += "\n[WS ERROR] "+e;
+}
+ws.onclose = ()=> consoleBox.textContent += "\n[*] WebSocket closed";
+</script>
 
-    ws.onopen = () => {
-      ws.send(JSON.stringify({steps: steps}));
-      log("[*] WebSocket connected. Running job...");
-    };
-
-    ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data);
-      if (msg.event === "step_start") {
-        log(`\\n[+] STEP ${msg.idx}: ${msg.name}`);
-        log(`[cmd] ${msg.cmd}`);
-      } else if (msg.event === "stdout") {
-        log(msg.line.replace(/\\n$/, ''));
-      } else if (msg.event === "error") {
-        log("[ERROR] " + msg.error);
-      } else if (msg.event === "step_done") {
-        log(msg.success ? "[✓] Step done" : "[✗] Step failed");
-      } else if (msg.event === "job_done") {
-        log("\\n=== JOB COMPLETE ===");
-        doneP.classList.remove('hidden');
-        reportA.href = `/report/${jobId}`;
-      }
-    };
-
-    ws.onerror = (e) => {
-      log("[WS ERROR] " + e);
-    };
-    ws.onclose = () => {
-      log("[*] WebSocket closed");
-    };
-  </script>
 </body>
 </html>
